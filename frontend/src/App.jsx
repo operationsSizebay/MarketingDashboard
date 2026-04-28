@@ -1,9 +1,32 @@
 import { useState } from 'react'
+import {
+  SignedIn,
+  SignedOut,
+  useUser,
+  useClerk,
+  AuthenticateWithRedirectCallback,
+} from '@clerk/clerk-react'
 import DashboardBr from './components/DashboardBr'
 import DashboardInt from './components/DashboardInt'
+import LoginPage from './components/LoginPage'
+import AccessDenied from './components/AccessDenied'
 
-export default function App() {
+const ALLOWED = ['@sizebay.com.br', '@audaces.com']
+
+function isAllowed(email) {
+  return ALLOWED.some(d => email.endsWith(d))
+}
+
+function AuthenticatedApp() {
+  const { user } = useUser()
+  const { signOut } = useClerk()
   const [tab, setTab] = useState('br')
+
+  const email = user?.primaryEmailAddress?.emailAddress || ''
+
+  if (!isAllowed(email)) {
+    return <AccessDenied email={email} onSignOut={() => signOut()} />
+  }
 
   return (
     <div className="app">
@@ -26,11 +49,32 @@ export default function App() {
               Internacional
             </button>
           </nav>
+          <div className="header-user">
+            <span className="header-email">{email}</span>
+            <button className="btn-signout" onClick={() => signOut()}>Sair</button>
+          </div>
         </div>
       </header>
       <main>
         {tab === 'br' ? <DashboardBr /> : <DashboardInt />}
       </main>
     </div>
+  )
+}
+
+export default function App() {
+  if (window.location.pathname === '/sso-callback') {
+    return <AuthenticateWithRedirectCallback />
+  }
+
+  return (
+    <>
+      <SignedOut>
+        <LoginPage />
+      </SignedOut>
+      <SignedIn>
+        <AuthenticatedApp />
+      </SignedIn>
+    </>
   )
 }
