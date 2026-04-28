@@ -6,7 +6,11 @@ const brRoutes = require('./routes/br');
 const intRoutes = require('./routes/int');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 app.use('/api/br', brRoutes);
