@@ -127,7 +127,7 @@ export default function DashboardBr() {
           </div>
 
           <div className="funnel-donut-row">
-            <Funnel mqls={data.mqls} sqls={data.sqls} perdidos={data.perdidos} theme="br" />
+            <Funnel mqls={data.mqls} sqls={data.sqls} perdidos={data.perdidos} theme="int" />
             <div className="chart-card donut-card">
               <p className="card-header">MQLs por Canal</p>
               <DoughnutChart data={data.canal_leads} />
@@ -150,27 +150,27 @@ export default function DashboardBr() {
             <div className="charts-grid">
               <div className="chart-card">
                 <p className="card-header">Canal — MQLs</p>
-                <HorizontalBar data={data.canal_leads} total={data.mqls} />
+                <HorizontalBar data={data.canal_leads} total={data.mqls} variant="blue" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Canal — SQLs</p>
-                <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="linen" />
+                <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="blue-dark" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Fonte — MQLs</p>
-                <HorizontalBar data={data.source_leads} total={data.mqls} />
+                <HorizontalBar data={data.source_leads} total={data.mqls} variant="blue" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Fonte — SQLs</p>
-                <HorizontalBar data={data.source_sqls} total={data.sqls} variant="linen" />
+                <HorizontalBar data={data.source_sqls} total={data.sqls} variant="blue-dark" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Tipo de Lead</p>
-                <HorizontalBar data={data.tipo_de_lead_leads} total={data.mqls} />
+                <HorizontalBar data={data.tipo_de_lead_leads} total={data.mqls} variant="blue" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Status</p>
-                <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="linen" />
+                <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="blue-dark" />
               </div>
             </div>
           )}
@@ -179,19 +179,19 @@ export default function DashboardBr() {
             <div className="charts-grid">
               <div className="chart-card">
                 <p className="card-header">Mídia — MQLs</p>
-                <HorizontalBar data={data.medium_leads} total={data.mqls} />
+                <HorizontalBar data={data.medium_leads} total={data.mqls} variant="blue" />
               </div>
               <div className="chart-card">
                 <p className="card-header">Mídia — SQLs</p>
-                <HorizontalBar data={data.medium_sqls} total={data.sqls} variant="linen" />
+                <HorizontalBar data={data.medium_sqls} total={data.sqls} variant="blue-dark" />
               </div>
               <div className="chart-card col-span-2">
                 <p className="card-header">Top Campanhas — MQLs</p>
-                <CampaignTable data={data.top_campanhas_leads} total={data.mqls} variant="br" />
+                <CampaignTable data={data.top_campanhas_leads} total={data.mqls} />
               </div>
               <div className="chart-card col-span-2">
                 <p className="card-header">Top Campanhas — SQLs</p>
-                <CampaignTable data={data.top_campanhas_sqls} total={data.sqls} variant="br" />
+                <CampaignTable data={data.top_campanhas_sqls} total={data.sqls} />
               </div>
             </div>
           )}

@@ -446,8 +446,8 @@ select:focus { outline: none; border-color: var(--teracota); }
   transition: width 0.4s ease;
 }
 
-/* ── BR dashboard enhanced styles ── */
-.br-dashboard .int-metric-card.accent .int-metric-value { color: var(--teracota); }
+/* ── BR dashboard — tema azul (igual ao INT) ── */
+.br-dashboard .int-metric-card.accent .int-metric-value { color: var(--int-blue); }
 .br-dashboard .chart-card {
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
@@ -457,9 +457,11 @@ select:focus { outline: none; border-color: var(--teracota); }
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
+.br-dashboard .sub-tab-btn.active { color: var(--int-blue); border-bottom-color: var(--int-blue); }
+.br-dashboard .btn-reset { border-color: var(--int-blue); color: var(--int-blue); }
+.br-dashboard .btn-reset:hover { background: var(--int-blue); color: var(--white); }
+.br-dashboard select:focus { border-color: var(--int-blue); }
 .br-dashboard .funnel-donut-row .funnel { margin-bottom: 0; }
-.mini-bar-fill.br  { background: var(--teracota); }
-.ct-count.br       { color: var(--teracota); }
 
 /* ── Login Page ── */
 .login-page {
