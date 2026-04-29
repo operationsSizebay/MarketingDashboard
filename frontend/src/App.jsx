@@ -1,9 +1,20 @@
 import { useState } from 'react'
 import DashboardBr from './components/DashboardBr'
 import DashboardInt from './components/DashboardInt'
+import LoginPage from './components/LoginPage'
 
 export default function App() {
+  const [authed, setAuthed] = useState(() => localStorage.getItem('sz_auth') === '1')
   const [tab, setTab] = useState('br')
+
+  const handleLogout = () => {
+    localStorage.removeItem('sz_auth')
+    setAuthed(false)
+  }
+
+  if (!authed) {
+    return <LoginPage onLogin={() => setAuthed(true)} />
+  }
 
   return (
     <div className="app">
@@ -26,6 +37,9 @@ export default function App() {
               Internacional
             </button>
           </nav>
+          <div className="header-user">
+            <button className="btn-signout" onClick={handleLogout}>Sair</button>
+          </div>
         </div>
       </header>
       <main>
