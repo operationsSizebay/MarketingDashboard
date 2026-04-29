@@ -1,10 +1,10 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install --prefix backend"
+    "buildCommand": "npm install"
   },
   "deploy": {
-    "startCommand": "node backend/index.js",
+    "startCommand": "node index.js",
     "restartPolicyType": "ON_FAILURE"
   }
 }
