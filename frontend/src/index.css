@@ -446,6 +446,41 @@ select:focus { outline: none; border-color: var(--teracota); }
   transition: width 0.4s ease;
 }
 
+/* ── Cards Inbound / Outbound ── */
+.inout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.inout-card {
+  background: var(--white);
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid #f0f0f0;
+}
+.inout-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.inout-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--black);
+  line-height: 1.1;
+}
+.inout-value.accent { color: var(--int-blue); }
+.inout-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+
 /* ── BR dashboard — tema azul (igual ao INT) ── */
 .br-dashboard .int-metric-card.accent .int-metric-value { color: var(--int-blue); }
 .br-dashboard .chart-card {

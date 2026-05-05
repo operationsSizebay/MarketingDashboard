@@ -25,6 +25,28 @@ function calcVar(curr, prev) {
   return ((curr - prev) / prev * 100).toFixed(1)
 }
 
+function InOutCard({ title, mqls, sqls, taxa }) {
+  return (
+    <div className="inout-card">
+      <p className="card-header">{title}</p>
+      <div className="inout-metrics">
+        <div>
+          <div className="inout-value">{(mqls ?? 0).toLocaleString('pt-BR')}</div>
+          <div className="inout-label">MQLs</div>
+        </div>
+        <div>
+          <div className="inout-value">{(sqls ?? 0).toLocaleString('pt-BR')}</div>
+          <div className="inout-label">SQLs</div>
+        </div>
+        <div>
+          <div className="inout-value accent">{taxa ?? 0}%</div>
+          <div className="inout-label">Taxa</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardBr() {
   const [meses,     setMeses]     = useState([])
   const [mes,       setMes]       = useState(null)
@@ -64,6 +86,9 @@ export default function DashboardBr() {
   const reset = () => setFilters(EMPTY)
   const hasFilters = Object.values(filters).some(Boolean)
 
+  const showInbound  = !filters.tipo_de_lead || filters.tipo_de_lead === 'Inbound'
+  const showOutbound = !filters.tipo_de_lead || filters.tipo_de_lead === 'Outbound'
+
   return (
     <div className="dashboard br-dashboard">
       <div className="controls-row">
@@ -79,7 +104,8 @@ export default function DashboardBr() {
           </select>
           <select value={filters.tipo_de_lead} onChange={e => setF('tipo_de_lead', e.target.value)}>
             <option value="">Tipo de Lead</option>
-            {(data?.tipo_de_lead_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
+            <option value="Inbound">Inbound</option>
+            <option value="Outbound">Outbound</option>
           </select>
           <select value={filters.status} onChange={e => setF('status', e.target.value)}>
             <option value="">Status</option>
@@ -98,18 +124,26 @@ export default function DashboardBr() {
 
       {data && (
         <>
+          {/* Métricas principais */}
           <div className="metrics-grid">
             <IntMetricCard
-              label="MQLs"
-              value={data.mqls.toLocaleString('pt-BR')}
-              subtitle="leads criados no mês"
-              variation={calcVar(data.mqls, prevData?.mqls)}
+              label="Total MQLs"
+              value={(data.mqls_total ?? data.mqls).toLocaleString('pt-BR')}
+              subtitle="inbound + outbound"
+              variation={calcVar(data.mqls_total, prevData?.mqls_total)}
             />
             <IntMetricCard
-              label="SQLs"
-              value={data.sqls.toLocaleString('pt-BR')}
+              label="Total SQLs"
+              value={(data.sqls_total ?? data.sqls).toLocaleString('pt-BR')}
               subtitle="convertidos no mês"
-              variation={calcVar(data.sqls, prevData?.sqls)}
+              variation={calcVar(data.sqls_total, prevData?.sqls_total)}
+            />
+            <IntMetricCard
+              label="Taxa MQL→SQL"
+              value={`${data.taxa_total ?? data.taxa}%`}
+              subtitle="conversão total"
+              variation={calcVar(data.taxa_total, prevData?.taxa_total)}
+              accent
             />
             <IntMetricCard
               label="Perdidos"
@@ -117,17 +151,31 @@ export default function DashboardBr() {
               subtitle="oportunidades perdidas"
               variation={calcVar(data.perdidos, prevData?.perdidos)}
             />
-            <IntMetricCard
-              label="Taxa MQL→SQL"
-              value={`${data.taxa}%`}
-              subtitle="conversão"
-              variation={calcVar(data.taxa, prevData?.taxa)}
-              accent
-            />
           </div>
 
+          {/* Cards Inbound / Outbound */}
+          <div className="inout-grid">
+            {showInbound && (
+              <InOutCard
+                title="Inbound"
+                mqls={data.mqls_inbound}
+                sqls={data.sqls_inbound}
+                taxa={data.taxa_inbound}
+              />
+            )}
+            {showOutbound && (
+              <InOutCard
+                title="Outbound"
+                mqls={data.mqls_outbound}
+                sqls={data.sqls_outbound}
+                taxa={data.taxa_outbound}
+              />
+            )}
+          </div>
+
+          {/* Funil + Rosca */}
           <div className="funnel-donut-row">
-            <Funnel mqls={data.mqls} sqls={data.sqls} perdidos={data.perdidos} theme="int" />
+            <Funnel mqls={data.mqls_total ?? data.mqls} sqls={data.sqls_total ?? data.sqls} perdidos={data.perdidos} theme="int" />
             <div className="chart-card donut-card">
               <p className="card-header">MQLs por Canal</p>
               <DoughnutChart data={data.canal_leads} />
