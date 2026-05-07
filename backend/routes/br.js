@@ -3,7 +3,7 @@ const router = express.Router();
 const { brPool } = require('../db');
 
 const TESTE   = `LOWER(COALESCE(nome_do_lead, '')) NOT LIKE '%teste%'`;
-const INBOUND = `tipo_de_lead = 'Inbound'`;
+const INBOUND = `tipo_de_lead = 'Inbound' AND canal IN ('inbound (não usar)', 'Inbound Marketing')`;
 const SALES_BR_BASE = `fonte = 'Marketing' AND canal IN ('inbound (não usar)', 'Inbound Marketing') AND (stage_group IS NULL OR stage_group != 'P')`;
 const NAO_IMPL = [`nome NOT LIKE '%IMPLANTAÇÃO%'`, `nome NOT LIKE '%IMPLANTACAO%'`];
 
@@ -84,7 +84,7 @@ router.get('/historico', async (_req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { mes, canal, fonte, status, informacoes_da_fonte } = req.query;
+  const { mes, fonte, status, informacoes_da_fonte } = req.query;
 
   if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
     return res.status(400).json({ error: 'Parâmetro mes obrigatório (YYYY-MM)' });
@@ -93,20 +93,17 @@ router.get('/', async (req, res) => {
   try {
     const mqlC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, TESTE, INBOUND];
     const mqlP = [mes];
-    addFilter(mqlC, mqlP, 'canal', canal);
     addFilter(mqlC, mqlP, 'sistema_de_anuncios', fonte);
     addFilter(mqlC, mqlP, 'status', status);
     addFilter(mqlC, mqlP, 'informacoes_da_fonte', informacoes_da_fonte);
 
     const sqlC = [`DATE_FORMAT(concluido_em, '%Y-%m') = ?`, `detalhes_de_status = 'S'`, `concluido_em IS NOT NULL`, TESTE, INBOUND];
     const sqlP = [mes];
-    addFilter(sqlC, sqlP, 'canal', canal);
     addFilter(sqlC, sqlP, 'sistema_de_anuncios', fonte);
     addFilter(sqlC, sqlP, 'informacoes_da_fonte', informacoes_da_fonte);
 
     const perdC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, `detalhes_de_status = 'F'`, TESTE, INBOUND];
     const perdP = [mes];
-    addFilter(perdC, perdP, 'canal', canal);
     addFilter(perdC, perdP, 'sistema_de_anuncios', fonte);
 
     const salesC = [`${SALES_BR_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(data_de_inicio, '%Y-%m') = ?`, ...NAO_IMPL];
@@ -136,8 +133,6 @@ router.get('/', async (req, res) => {
       medium_vendas: groupBy(salesRows, 'campaign_search_term'),
       camp_vendas:   groupBy(salesRows, 'ad_campaign_utm').slice(0, 5),
 
-      canal_leads:              groupBy(mqlRows, 'canal'),
-      canal_sqls:               groupBy(sqlRows, 'canal'),
       source_leads:             groupBy(mqlRows, 'sistema_de_anuncios'),
       source_sqls:              groupBy(sqlRows, 'sistema_de_anuncios'),
       medium_leads:             groupBy(mqlRows, 'midia'),

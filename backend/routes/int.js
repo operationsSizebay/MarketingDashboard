@@ -3,7 +3,7 @@ const router = express.Router();
 const { intPool } = require('../db');
 
 const TESTE = `LOWER(COALESCE(lead_name, '')) NOT LIKE '%teste%'`;
-const INBOUND_LEADS = `canal IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
+const INBOUND_LEADS = `channel IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const INBOUND_SALES = `channel IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const SALES_INT_BASE = `${INBOUND_SALES} AND (stage_group IS NULL OR stage_group != 'P')`;
 const NAO_IMPL = [`nome NOT LIKE '%IMPLANTAÇÃO%'`, `nome NOT LIKE '%IMPLANTACAO%'`];
@@ -94,7 +94,7 @@ router.get('/historico', async (_req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { mes, operacao, canal, stage } = req.query;
+  const { mes, operacao, stage } = req.query;
 
   if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
     return res.status(400).json({ error: 'Parâmetro mes obrigatório (YYYY-MM)' });
@@ -103,19 +103,16 @@ router.get('/', async (req, res) => {
   try {
     const mqlC = [`DATE_FORMAT(created_on, '%Y-%m') = ?`, TESTE, INBOUND_LEADS];
     const mqlP = [mes];
-    addFilter(mqlC, mqlP, 'canal', canal);
     addFilter(mqlC, mqlP, 'stage', stage);
     if (operacao) { mqlC.push(`${OPERACAO_CASE} = ?`); mqlP.push(operacao); }
 
     const sqlC = [`DATE_FORMAT(completed_on, '%Y-%m') = ?`, `status_details = 'S'`, `completed_on IS NOT NULL`, TESTE, INBOUND_LEADS];
     const sqlP = [mes];
-    addFilter(sqlC, sqlP, 'canal', canal);
     addFilter(sqlC, sqlP, 'stage', stage);
     if (operacao) { sqlC.push(`${OPERACAO_CASE} = ?`); sqlP.push(operacao); }
 
     const perdC = [`DATE_FORMAT(created_on, '%Y-%m') = ?`, `status_details = 'F'`, TESTE, INBOUND_LEADS];
     const perdP = [mes];
-    addFilter(perdC, perdP, 'canal', canal);
     if (operacao) { perdC.push(`${OPERACAO_CASE} = ?`); perdP.push(operacao); }
 
     const salesC = [`${SALES_INT_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(created_on, '%Y-%m') = ?`, ...NAO_IMPL];
@@ -177,8 +174,6 @@ router.get('/', async (req, res) => {
       source_vendas: groupBy(salesRows, 'ad_campaign_utm'),
       camp_vendas:   groupBy(salesRows, 'ad_campaign_utm').slice(0, 5),
 
-      canal_leads:  groupBy(mqlRows, 'canal'),
-      canal_sqls:   groupBy(sqlRows, 'canal'),
       source_leads: groupBy(mqlRows, 'ad_system'),
       source_sqls:  groupBy(sqlRows, 'ad_system'),
       medium_leads: groupBy(mqlRows, 'campaign_search_term'),

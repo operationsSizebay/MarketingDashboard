@@ -8,7 +8,7 @@ import LineChart from './LineChart'
 import DoughnutChart from './DoughnutChart'
 import CampaignTable from './CampaignTable'
 
-const EMPTY = { operacao: '', canal: '', stage: '' }
+const EMPTY = { operacao: '', stage: '' }
 const SUB_TABS = [
   { key: 'visao-geral', label: 'Visão Geral' },
   { key: 'midia-paga',  label: 'Mídia Paga' },
@@ -147,10 +147,6 @@ export default function DashboardInt() {
             <option value="">Operação</option>
             {(data?.operacao_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
           </select>
-          <select value={filters.canal} onChange={e => setF('canal', e.target.value)}>
-            <option value="">Canal</option>
-            {(data?.canal_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
-          </select>
           <select value={filters.stage} onChange={e => setF('stage', e.target.value)}>
             <option value="">Stage</option>
             {(data?.stage_breakdown || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
@@ -212,14 +208,6 @@ export default function DashboardInt() {
               </div>
 
               <div className="charts-grid">
-                <div className="chart-card">
-                  <p className="card-header">Canal — MQLs</p>
-                  <HorizontalBar data={data.canal_leads} total={data.mqls} variant="blue" />
-                </div>
-                <div className="chart-card">
-                  <p className="card-header">Canal — SQLs</p>
-                  <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="blue-dark" />
-                </div>
                 <div className="chart-card">
                   <p className="card-header">Operação — MQLs</p>
                   <HorizontalBar data={data.operacao_leads} total={data.mqls} variant="blue" />

@@ -8,7 +8,7 @@ import LineChart from './LineChart'
 import DoughnutChart from './DoughnutChart'
 import CampaignTable from './CampaignTable'
 
-const EMPTY = { canal: '', fonte: '', status: '', informacoes_da_fonte: '' }
+const EMPTY = { fonte: '', status: '', informacoes_da_fonte: '' }
 const SUB_TABS = [
   { key: 'visao-geral', label: 'Visão Geral' },
   { key: 'midia-paga',  label: 'Mídia Paga' },
@@ -113,10 +113,6 @@ export default function DashboardBr() {
       <div className="controls-row">
         <MonthSelector meses={meses} value={mes} onChange={setMes} />
         <div className="filters">
-          <select value={filters.canal} onChange={e => setF('canal', e.target.value)}>
-            <option value="">Canal</option>
-            {(data?.canal_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
-          </select>
           <select value={filters.fonte} onChange={e => setF('fonte', e.target.value)}>
             <option value="">Fonte</option>
             {(data?.source_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
@@ -186,14 +182,6 @@ export default function DashboardBr() {
               </div>
 
               <div className="charts-grid">
-                <div className="chart-card">
-                  <p className="card-header">Canal — MQLs</p>
-                  <HorizontalBar data={data.canal_leads} total={data.mqls} variant="blue" />
-                </div>
-                <div className="chart-card">
-                  <p className="card-header">Canal — SQLs</p>
-                  <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="blue-dark" />
-                </div>
                 <div className="chart-card">
                   <p className="card-header">Fonte — MQLs</p>
                   <HorizontalBar data={data.source_leads} total={data.mqls} variant="blue" />
