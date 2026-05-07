@@ -6,6 +6,7 @@ const TESTE = `LOWER(COALESCE(lead_name, '')) NOT LIKE '%teste%'`;
 const INBOUND_LEADS = `canal IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const INBOUND_SALES = `channel IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const SALES_INT_BASE = `${INBOUND_SALES} AND (stage_group IS NULL OR stage_group != 'P')`;
+const NAO_IMPL = [`nome NOT LIKE '%IMPLANTAÇÃO%'`, `nome NOT LIKE '%IMPLANTACAO%'`];
 
 const OPERACAO_CASE = `CASE
   WHEN LOWER(lead_operation_ops_correto) LIKE '%europa%'       OR LOWER(lead_operation_ops_correto) LIKE '%europe%'        THEN 'Europa'
@@ -51,16 +52,6 @@ function addFilter(conds, params, col, val) {
   if (val) { conds.push(`${col} = ?`); params.push(val); }
 }
 
-function extractPais(row) {
-  for (const f of [row.conversion_identifier, row.ad_campaign_utm]) {
-    if (f) {
-      const m = String(f).match(/\[([^\]]+)\]/);
-      if (m) return m[1];
-    }
-  }
-  return 'Não informado';
-}
-
 router.get('/meses', async (_req, res) => {
   try {
     const [rows] = await intPool.query(
@@ -103,7 +94,7 @@ router.get('/historico', async (_req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { mes, operacao, pais, canal, stage } = req.query;
+  const { mes, operacao, canal, stage } = req.query;
 
   if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
     return res.status(400).json({ error: 'Parâmetro mes obrigatório (YYYY-MM)' });
@@ -127,10 +118,10 @@ router.get('/', async (req, res) => {
     addFilter(perdC, perdP, 'canal', canal);
     if (operacao) { perdC.push(`${OPERACAO_CASE} = ?`); perdP.push(operacao); }
 
-    const salesC = [`${SALES_INT_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(created_on, '%Y-%m') = ?`];
+    const salesC = [`${SALES_INT_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(created_on, '%Y-%m') = ?`, ...NAO_IMPL];
     const salesP = [mes];
 
-    const perdSalesC = [`${SALES_INT_BASE}`, `stage_group = 'F'`, `DATE_FORMAT(end_date, '%Y-%m') = ?`];
+    const perdSalesC = [`${SALES_INT_BASE}`, `stage_group = 'F'`, `DATE_FORMAT(end_date, '%Y-%m') = ?`, ...NAO_IMPL];
     const perdSalesP = [mes];
 
     const [mqlRows, sqlRows, perdRows, mqlOpRows, sqlOpRows, salesRows, perdSalesRows] = await Promise.all([
@@ -162,11 +153,6 @@ router.get('/', async (req, res) => {
       intPool.query(`SELECT * FROM sales_deals WHERE ${perdSalesC.join(' AND ')}`, perdSalesP).then(([r]) => r),
     ]);
 
-    const mqlWithPais = mqlRows.map(r => ({ ...r, _pais: extractPais(r) }));
-    const sqlWithPais = sqlRows.map(r => ({ ...r, _pais: extractPais(r) }));
-    const filteredMql = pais ? mqlWithPais.filter(r => r._pais === pais) : mqlWithPais;
-    const filteredSql = pais ? sqlWithPais.filter(r => r._pais === pais) : sqlWithPais;
-
     // Vendas por país (top 8, campo country_oficial de sales_deals)
     const paisVendasMap = {};
     for (const row of salesRows) {
@@ -179,10 +165,10 @@ router.get('/', async (req, res) => {
       .slice(0, 8);
 
     res.json({
-      mqls:    filteredMql.length,
-      sqls:    filteredSql.length,
+      mqls:    mqlRows.length,
+      sqls:    sqlRows.length,
       perdidos: perdRows.length,
-      taxa: filteredMql.length > 0 ? parseFloat(((filteredSql.length / filteredMql.length) * 100).toFixed(1)) : 0,
+      taxa: mqlRows.length > 0 ? parseFloat(((sqlRows.length / mqlRows.length) * 100).toFixed(1)) : 0,
 
       vendas_mes:    salesRows.length,
       perdidos_mes:  perdSalesRows.length,
@@ -191,19 +177,17 @@ router.get('/', async (req, res) => {
       source_vendas: groupBy(salesRows, 'ad_campaign_utm'),
       camp_vendas:   groupBy(salesRows, 'ad_campaign_utm').slice(0, 5),
 
-      canal_leads:  groupBy(filteredMql, 'canal'),
-      canal_sqls:   groupBy(filteredSql, 'canal'),
-      source_leads: groupBy(filteredMql, 'ad_system'),
-      source_sqls:  groupBy(filteredSql, 'ad_system'),
-      medium_leads: groupBy(filteredMql, 'campaign_search_term'),
-      medium_sqls:  groupBy(filteredSql, 'campaign_search_term'),
-      stage_breakdown: groupBy(filteredMql, 'stage'),
+      canal_leads:  groupBy(mqlRows, 'canal'),
+      canal_sqls:   groupBy(sqlRows, 'canal'),
+      source_leads: groupBy(mqlRows, 'ad_system'),
+      source_sqls:  groupBy(sqlRows, 'ad_system'),
+      medium_leads: groupBy(mqlRows, 'campaign_search_term'),
+      medium_sqls:  groupBy(sqlRows, 'campaign_search_term'),
+      stage_breakdown: groupBy(mqlRows, 'stage'),
       operacao_leads: mqlOpRows.map(r => ({ name: r.operacao_normalizada, count: Number(r.count) })),
       operacao_sqls:  sqlOpRows.map(r => ({ name: r.operacao_normalizada, count: Number(r.count) })),
-      pais_leads: groupBy(mqlWithPais, '_pais'),
-      pais_sqls:  groupBy(sqlWithPais, '_pais'),
-      top_campanhas_leads: groupBy(filteredMql, 'ad_campaign_utm').slice(0, 10),
-      top_campanhas_sqls:  groupBy(filteredSql, 'ad_campaign_utm').slice(0, 10),
+      top_campanhas_leads: groupBy(mqlRows, 'ad_campaign_utm').slice(0, 10),
+      top_campanhas_sqls:  groupBy(sqlRows,  'ad_campaign_utm').slice(0, 10),
     });
   } catch (err) {
     console.error('[INT]', err.message);

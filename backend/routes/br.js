@@ -5,6 +5,7 @@ const { brPool } = require('../db');
 const TESTE   = `LOWER(COALESCE(nome_do_lead, '')) NOT LIKE '%teste%'`;
 const INBOUND = `tipo_de_lead = 'Inbound'`;
 const SALES_BR_BASE = `fonte = 'Marketing' AND canal IN ('inbound (não usar)', 'Inbound Marketing') AND (stage_group IS NULL OR stage_group != 'P')`;
+const NAO_IMPL = [`nome NOT LIKE '%IMPLANTAÇÃO%'`, `nome NOT LIKE '%IMPLANTACAO%'`];
 
 function groupBy(rows, key) {
   const map = {};
@@ -108,10 +109,10 @@ router.get('/', async (req, res) => {
     addFilter(perdC, perdP, 'canal', canal);
     addFilter(perdC, perdP, 'sistema_de_anuncios', fonte);
 
-    const salesC = [`${SALES_BR_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(data_de_inicio, '%Y-%m') = ?`];
+    const salesC = [`${SALES_BR_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(data_de_inicio, '%Y-%m') = ?`, ...NAO_IMPL];
     const salesP = [mes];
 
-    const perdSalesC = [`${SALES_BR_BASE}`, `stage_group = 'F'`, `DATE_FORMAT(data_de_termino, '%Y-%m') = ?`];
+    const perdSalesC = [`${SALES_BR_BASE}`, `stage_group = 'F'`, `DATE_FORMAT(data_de_termino, '%Y-%m') = ?`, ...NAO_IMPL];
     const perdSalesP = [mes];
 
     const [mqlRows, sqlRows, perdRows, salesRows, perdSalesRows] = await Promise.all([

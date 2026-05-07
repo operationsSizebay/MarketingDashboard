@@ -25,6 +25,16 @@ function calcVar(curr, prev) {
   return ((curr - prev) / prev * 100).toFixed(1)
 }
 
+function SectionDivider({ title }) {
+  return (
+    <div className="section-divider">
+      <div className="section-divider-line" />
+      <span className="section-divider-title">{title}</span>
+      <div className="section-divider-line" />
+    </div>
+  )
+}
+
 function PerdidosSection({ perdidos_mes, motivos_perda }) {
   if (perdidos_mes == null) return null
   return (
@@ -32,35 +42,28 @@ function PerdidosSection({ perdidos_mes, motivos_perda }) {
       <div className="perdidos-header">
         <div>
           <div className="perdidos-total">{(perdidos_mes ?? 0).toLocaleString('pt-BR')}</div>
-          <div className="perdidos-label">perdidos no mês (sales)</div>
+          <div className="perdidos-label">perdidos no mês</div>
         </div>
         <p className="card-header" style={{ marginBottom: 0, marginLeft: 'auto' }}>Motivos de Perda</p>
       </div>
       {motivos_perda && motivos_perda.length > 0 && (
-        <table className="motivos-table">
-          <thead>
-            <tr>
-              <th>Fase do Negócio</th>
-              <th style={{ textAlign: 'right', width: 60 }}>Qtd</th>
-              <th style={{ textAlign: 'right', width: 60 }}>%</th>
-              <th style={{ width: 140 }}>Barra</th>
-            </tr>
-          </thead>
-          <tbody>
-            {motivos_perda.map((m, i) => (
-              <tr key={m.motivo} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                <td>{m.motivo}</td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{m.count}</td>
-                <td style={{ textAlign: 'right', color: '#888' }}>{m.percentual}%</td>
-                <td>
-                  <div className="motivo-bar">
-                    <div className="motivo-bar-fill" style={{ width: `${m.percentual}%` }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="ranked-list">
+          {motivos_perda.map((m, i) => (
+            <div key={m.motivo} className="ranked-item">
+              <span className="ranked-pos">#{i + 1}</span>
+              <div className="ranked-content">
+                <div className="ranked-header">
+                  <span className="ranked-name">{m.motivo}</span>
+                  <span className="ranked-count">{m.count}</span>
+                  <span className="ranked-pct">{m.percentual}%</span>
+                </div>
+                <div className="ranked-track">
+                  <div className="ranked-fill" style={{ width: `${m.percentual}%`, background: '#BF512B' }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -135,44 +138,6 @@ export default function DashboardBr() {
 
       {data && (
         <>
-          <div className="metrics-grid">
-            <IntMetricCard
-              label="MQLs"
-              value={data.mqls.toLocaleString('pt-BR')}
-              subtitle="leads inbound no mês"
-              variation={calcVar(data.mqls, prevData?.mqls)}
-            />
-            <IntMetricCard
-              label="SQLs"
-              value={data.sqls.toLocaleString('pt-BR')}
-              subtitle="convertidos no mês"
-              variation={calcVar(data.sqls, prevData?.sqls)}
-            />
-            <IntMetricCard
-              label="Taxa MQL→SQL"
-              value={`${data.taxa}%`}
-              subtitle="conversão de leads"
-              variation={calcVar(data.taxa, prevData?.taxa)}
-              accent
-            />
-            <IntMetricCard
-              label="Vendas"
-              value={(data.vendas_mes ?? 0).toLocaleString('pt-BR')}
-              subtitle="fechamentos no mês"
-              variation={calcVar(data.vendas_mes, prevData?.vendas_mes)}
-            />
-          </div>
-
-          <div className="funnel-donut-row">
-            <Funnel mqls={data.mqls} sqls={data.sqls} vendas={data.vendas_mes ?? 0} theme="br" />
-            <div className="chart-card donut-card">
-              <p className="card-header">MQLs por Fonte</p>
-              <DoughnutChart data={data.source_leads} />
-            </div>
-          </div>
-
-          <PerdidosSection perdidos_mes={data.perdidos_mes} motivos_perda={data.motivos_perda} />
-
           <div className="sub-tab-bar">
             {SUB_TABS.map(({ key, label }) => (
               <button
@@ -186,32 +151,81 @@ export default function DashboardBr() {
           </div>
 
           {subTab === 'visao-geral' && (
-            <div className="charts-grid">
-              <div className="chart-card">
-                <p className="card-header">Canal — MQLs</p>
-                <HorizontalBar data={data.canal_leads} total={data.mqls} variant="blue" />
+            <>
+              {/* ── Seção: Leads ── */}
+              <SectionDivider title="Leads" />
+
+              <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                <IntMetricCard
+                  label="MQLs"
+                  value={data.mqls.toLocaleString('pt-BR')}
+                  subtitle="leads inbound no mês"
+                  variation={calcVar(data.mqls, prevData?.mqls)}
+                />
+                <IntMetricCard
+                  label="SQLs"
+                  value={data.sqls.toLocaleString('pt-BR')}
+                  subtitle="convertidos no mês"
+                  variation={calcVar(data.sqls, prevData?.sqls)}
+                />
+                <IntMetricCard
+                  label="Taxa MQL→SQL"
+                  value={`${data.taxa}%`}
+                  subtitle="conversão de leads"
+                  variation={calcVar(data.taxa, prevData?.taxa)}
+                  accent
+                />
               </div>
-              <div className="chart-card">
-                <p className="card-header">Canal — SQLs</p>
-                <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="blue-dark" />
+
+              <div className="funnel-donut-row">
+                <Funnel mqls={data.mqls} sqls={data.sqls} vendas={data.vendas_mes ?? 0} />
+                <div className="chart-card donut-card">
+                  <p className="card-header">MQLs por Fonte</p>
+                  <DoughnutChart data={data.source_leads} />
+                </div>
               </div>
-              <div className="chart-card">
-                <p className="card-header">Fonte — MQLs</p>
-                <HorizontalBar data={data.source_leads} total={data.mqls} variant="blue" />
+
+              <div className="charts-grid">
+                <div className="chart-card">
+                  <p className="card-header">Canal — MQLs</p>
+                  <HorizontalBar data={data.canal_leads} total={data.mqls} variant="blue" />
+                </div>
+                <div className="chart-card">
+                  <p className="card-header">Canal — SQLs</p>
+                  <HorizontalBar data={data.canal_sqls} total={data.sqls} variant="blue-dark" />
+                </div>
+                <div className="chart-card">
+                  <p className="card-header">Fonte — MQLs</p>
+                  <HorizontalBar data={data.source_leads} total={data.mqls} variant="blue" />
+                </div>
+                <div className="chart-card">
+                  <p className="card-header">Fonte — SQLs</p>
+                  <HorizontalBar data={data.source_sqls} total={data.sqls} variant="blue-dark" />
+                </div>
+                <div className="chart-card">
+                  <p className="card-header">Status</p>
+                  <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="blue" />
+                </div>
+                <div className="chart-card">
+                  <p className="card-header">Informações da Fonte</p>
+                  <HorizontalBar data={data.informacoes_da_fonte_leads} total={data.mqls} variant="blue-dark" />
+                </div>
               </div>
-              <div className="chart-card">
-                <p className="card-header">Fonte — SQLs</p>
-                <HorizontalBar data={data.source_sqls} total={data.sqls} variant="blue-dark" />
+
+              {/* ── Seção: Vendas ── */}
+              <SectionDivider title="Vendas" />
+
+              <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                <IntMetricCard
+                  label="Vendas"
+                  value={(data.vendas_mes ?? 0).toLocaleString('pt-BR')}
+                  subtitle="fechamentos no mês"
+                  variation={calcVar(data.vendas_mes, prevData?.vendas_mes)}
+                />
               </div>
-              <div className="chart-card">
-                <p className="card-header">Status</p>
-                <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="blue" />
-              </div>
-              <div className="chart-card">
-                <p className="card-header">Informações da Fonte</p>
-                <HorizontalBar data={data.informacoes_da_fonte_leads} total={data.mqls} variant="blue-dark" />
-              </div>
-            </div>
+
+              <PerdidosSection perdidos_mes={data.perdidos_mes} motivos_perda={data.motivos_perda} />
+            </>
           )}
 
           {subTab === 'midia-paga' && (
