@@ -6,7 +6,7 @@ const TESTE = `LOWER(COALESCE(lead_name, '')) NOT LIKE '%teste%'`;
 const INBOUND_LEADS = `channel IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const INBOUND_SALES = `channel IN ('inbound', 'inbound (Not Use)', 'Inbound Marketing', 'Alliances/Inbound')`;
 const SALES_INT_BASE = `${INBOUND_SALES} AND (stage_group IS NULL OR stage_group != 'P')`;
-const NAO_IMPL = [`nome NOT LIKE '%IMPLANTAÇÃO%'`, `nome NOT LIKE '%IMPLANTACAO%'`];
+const NAO_IMPL = [`name NOT LIKE '%IMPLANTAÇÃO%'`, `name NOT LIKE '%IMPLANTACAO%'`];
 
 const OPERACAO_CASE = `CASE
   WHEN LOWER(lead_operation_ops_correto) LIKE '%europa%'       OR LOWER(lead_operation_ops_correto) LIKE '%europe%'        THEN 'Europa'
