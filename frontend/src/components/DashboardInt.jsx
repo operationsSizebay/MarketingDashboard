@@ -25,6 +25,89 @@ function calcVar(curr, prev) {
   return ((curr - prev) / prev * 100).toFixed(1)
 }
 
+function PerdidosSection({ perdidos_mes, motivos_perda }) {
+  if (perdidos_mes == null) return null
+  return (
+    <div className="perdidos-section">
+      <div className="perdidos-header">
+        <div>
+          <div className="perdidos-total">{(perdidos_mes ?? 0).toLocaleString('pt-BR')}</div>
+          <div className="perdidos-label">perdidos no mês (sales)</div>
+        </div>
+        <p className="card-header" style={{ marginBottom: 0, marginLeft: 'auto' }}>Motivos de Perda</p>
+      </div>
+      {motivos_perda && motivos_perda.length > 0 && (
+        <table className="motivos-table">
+          <thead>
+            <tr>
+              <th>Deal Stage</th>
+              <th style={{ textAlign: 'right', width: 60 }}>Qtd</th>
+              <th style={{ textAlign: 'right', width: 60 }}>%</th>
+              <th style={{ width: 140 }}>Barra</th>
+            </tr>
+          </thead>
+          <tbody>
+            {motivos_perda.map((m, i) => (
+              <tr key={m.motivo} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                <td>{m.motivo}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>{m.count}</td>
+                <td style={{ textAlign: 'right', color: '#888' }}>{m.percentual}%</td>
+                <td>
+                  <div className="motivo-bar">
+                    <div className="motivo-bar-fill int" style={{ width: `${m.percentual}%` }} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+function PaisComparison({ vendas_por_pais = [], pais_leads = [] }) {
+  if (!vendas_por_pais.length) return null
+  const leadsMap = Object.fromEntries(pais_leads.map(p => [p.name, p.count]))
+  const maxVendas = Math.max(...vendas_por_pais.map(p => p.count), 1)
+  const maxLeads  = Math.max(...pais_leads.map(p => p.count), 1)
+
+  return (
+    <div className="chart-card pais-compare-card">
+      <p className="card-header">Vendas por País — Top 8</p>
+      <div className="pais-legend">
+        <span className="pais-legend-item blue-dark-dot">Vendas</span>
+        <span className="pais-legend-item blue-dot">MQLs</span>
+      </div>
+      <div className="pais-compare-list">
+        {vendas_por_pais.map(p => {
+          const vendas = p.count
+          const leads  = leadsMap[p.name] || 0
+          return (
+            <div key={p.name} className="pais-compare-row">
+              <div className="pais-name" title={p.name}>{p.name}</div>
+              <div className="pais-bars-col">
+                <div className="pais-bar-row">
+                  <div className="hbar-track pais-track">
+                    <div className="hbar-fill blue-dark" style={{ width: `${(vendas / maxVendas) * 100}%` }} />
+                  </div>
+                  <span className="pais-bar-val">{vendas} vendas</span>
+                </div>
+                <div className="pais-bar-row">
+                  <div className="hbar-track pais-track">
+                    <div className="hbar-fill blue" style={{ width: `${(leads / maxLeads) * 100}%` }} />
+                  </div>
+                  <span className="pais-bar-val muted">{leads} leads</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardInt() {
   const [meses,     setMeses]     = useState([])
   const [mes,       setMes]       = useState(null)
@@ -55,7 +138,7 @@ export default function DashboardInt() {
       fetchInt(mes, active),
       fetchInt(prev, active).catch(() => null),
     ])
-      .then(([curr, prev]) => { setData(curr); setPrevData(prev) })
+      .then(([curr, p]) => { setData(curr); setPrevData(p) })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [mes, filters])
@@ -98,7 +181,7 @@ export default function DashboardInt() {
             <IntMetricCard
               label="MQLs"
               value={data.mqls.toLocaleString('pt-BR')}
-              subtitle="leads criados no mês"
+              subtitle="leads inbound no mês"
               variation={calcVar(data.mqls, prevData?.mqls)}
             />
             <IntMetricCard
@@ -108,27 +191,31 @@ export default function DashboardInt() {
               variation={calcVar(data.sqls, prevData?.sqls)}
             />
             <IntMetricCard
-              label="Perdidos"
-              value={data.perdidos.toLocaleString('pt-BR')}
-              subtitle="oportunidades perdidas"
-              variation={calcVar(data.perdidos, prevData?.perdidos)}
-            />
-            <IntMetricCard
               label="Taxa MQL→SQL"
               value={`${data.taxa}%`}
               subtitle="conversão"
               variation={calcVar(data.taxa, prevData?.taxa)}
               accent
             />
+            <IntMetricCard
+              label="Vendas"
+              value={(data.vendas_mes ?? 0).toLocaleString('pt-BR')}
+              subtitle="fechamentos no mês"
+              variation={calcVar(data.vendas_mes, prevData?.vendas_mes)}
+            />
           </div>
 
           <div className="funnel-donut-row">
-            <Funnel mqls={data.mqls} sqls={data.sqls} perdidos={data.perdidos} theme="int" />
+            <Funnel mqls={data.mqls} sqls={data.sqls} vendas={data.vendas_mes ?? 0} theme="int" />
             <div className="chart-card donut-card">
               <p className="card-header">MQLs por Operação</p>
               <DoughnutChart data={data.operacao_leads} />
             </div>
           </div>
+
+          <PerdidosSection perdidos_mes={data.perdidos_mes} motivos_perda={data.motivos_perda} />
+
+          <PaisComparison vendas_por_pais={data.vendas_por_pais} pais_leads={data.pais_leads} />
 
           <div className="sub-tab-bar">
             {SUB_TABS.map(({ key, label }) => (
@@ -192,6 +279,14 @@ export default function DashboardInt() {
               <div className="chart-card">
                 <p className="card-header">Mídia (search term) — SQLs</p>
                 <HorizontalBar data={data.medium_sqls} total={data.sqls} variant="blue-dark" />
+              </div>
+              <div className="chart-card">
+                <p className="card-header">UTM Source — Vendas</p>
+                <HorizontalBar data={data.source_vendas} total={data.vendas_mes ?? 0} variant="blue-dark" />
+              </div>
+              <div className="chart-card col-span-2">
+                <p className="card-header">Top 5 Campanhas — Vendas</p>
+                <CampaignTable data={data.camp_vendas} total={data.vendas_mes ?? 0} />
               </div>
               <div className="chart-card col-span-2">
                 <p className="card-header">Top Campanhas — MQLs</p>

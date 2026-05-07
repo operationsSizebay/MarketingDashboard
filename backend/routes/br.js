@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { brPool } = require('../db');
 
-const TESTE = `LOWER(COALESCE(nome_do_lead, '')) NOT LIKE '%teste%'`;
-
-const MEETIME_OWNERS = `owner_name IN ('Vitoria', 'Sabrina', 'Marcela')`;
+const TESTE   = `LOWER(COALESCE(nome_do_lead, '')) NOT LIKE '%teste%'`;
+const INBOUND = `tipo_de_lead = 'Inbound'`;
+const SALES_BR_BASE = `fonte = 'Marketing' AND canal IN ('inbound (não usar)', 'Inbound Marketing') AND (stage_group IS NULL OR stage_group != 'P')`;
 
 function groupBy(rows, key) {
   const map = {};
@@ -17,12 +17,28 @@ function groupBy(rows, key) {
     .sort((a, b) => b.count - a.count);
 }
 
+function groupByWithPct(rows, key) {
+  const map = {};
+  for (const row of rows) {
+    const val = (row[key] != null && row[key] !== '') ? String(row[key]) : 'Não informado';
+    map[val] = (map[val] || 0) + 1;
+  }
+  const total = Object.values(map).reduce((s, n) => s + n, 0);
+  return Object.entries(map)
+    .map(([motivo, count]) => ({
+      motivo,
+      count,
+      percentual: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
 function addFilter(conds, params, col, val) {
   if (val) { conds.push(`${col} = ?`); params.push(val); }
 }
 
-function taxa(sqls, mqls) {
-  return mqls > 0 ? parseFloat(((sqls / mqls) * 100).toFixed(1)) : 0;
+function taxa(num, den) {
+  return den > 0 ? parseFloat(((num / den) * 100).toFixed(1)) : 0;
 }
 
 router.get('/meses', async (_req, res) => {
@@ -30,7 +46,7 @@ router.get('/meses', async (_req, res) => {
     const [rows] = await brPool.query(
       `SELECT DISTINCT DATE_FORMAT(criado_em, '%Y-%m') AS mes
        FROM view_leadsBrCloude
-       WHERE ${TESTE} AND criado_em IS NOT NULL
+       WHERE ${TESTE} AND ${INBOUND} AND criado_em IS NOT NULL
        ORDER BY mes DESC`
     );
     res.json(rows.map(r => r.mes).filter(Boolean));
@@ -46,13 +62,13 @@ router.get('/historico', async (_req, res) => {
       brPool.query(
         `SELECT DATE_FORMAT(criado_em, '%Y-%m') AS mes, COUNT(*) AS total
          FROM view_leadsBrCloude
-         WHERE ${TESTE} AND criado_em IS NOT NULL
+         WHERE ${TESTE} AND ${INBOUND} AND criado_em IS NOT NULL
          GROUP BY mes ORDER BY mes ASC`
       ),
       brPool.query(
         `SELECT DATE_FORMAT(concluido_em, '%Y-%m') AS mes, COUNT(*) AS total
          FROM view_leadsBrCloude
-         WHERE detalhes_de_status = 'S' AND concluido_em IS NOT NULL AND ${TESTE}
+         WHERE detalhes_de_status = 'S' AND concluido_em IS NOT NULL AND ${TESTE} AND ${INBOUND}
          GROUP BY mes ORDER BY mes ASC`
       ),
     ]);
@@ -66,111 +82,69 @@ router.get('/historico', async (_req, res) => {
   }
 });
 
-// Rota dedicada para dados do Meetime (Outbound)
-router.get('/meetime', async (req, res) => {
-  const { mes } = req.query;
-  if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
-    return res.status(400).json({ error: 'Parâmetro mes obrigatório (YYYY-MM)' });
-  }
-  try {
-    const [[row]] = await brPool.query(
-      `SELECT COUNT(id_lead) AS count FROM view_meetimeClaude
-       WHERE ${MEETIME_OWNERS} AND DATE_FORMAT(end_date, '%Y-%m') = ?`,
-      [mes]
-    );
-    res.json({ mqls_outbound: Number(row.count) });
-  } catch (err) {
-    console.error('[BR meetime]', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.get('/', async (req, res) => {
-  const { mes, tipo_de_lead, canal, fonte, status, informacoes_da_fonte } = req.query;
+  const { mes, canal, fonte, status, informacoes_da_fonte } = req.query;
 
   if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
     return res.status(400).json({ error: 'Parâmetro mes obrigatório (YYYY-MM)' });
   }
 
   try {
-    // MQL — leads criados no mês
-    const mqlC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, TESTE];
+    const mqlC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, TESTE, INBOUND];
     const mqlP = [mes];
-    addFilter(mqlC, mqlP, 'tipo_de_lead', tipo_de_lead);
     addFilter(mqlC, mqlP, 'canal', canal);
     addFilter(mqlC, mqlP, 'sistema_de_anuncios', fonte);
     addFilter(mqlC, mqlP, 'status', status);
     addFilter(mqlC, mqlP, 'informacoes_da_fonte', informacoes_da_fonte);
 
-    // SQL — leads concluídos no mês com status S
-    const sqlC = [`DATE_FORMAT(concluido_em, '%Y-%m') = ?`, `detalhes_de_status = 'S'`, `concluido_em IS NOT NULL`, TESTE];
+    const sqlC = [`DATE_FORMAT(concluido_em, '%Y-%m') = ?`, `detalhes_de_status = 'S'`, `concluido_em IS NOT NULL`, TESTE, INBOUND];
     const sqlP = [mes];
-    addFilter(sqlC, sqlP, 'tipo_de_lead', tipo_de_lead);
     addFilter(sqlC, sqlP, 'canal', canal);
     addFilter(sqlC, sqlP, 'sistema_de_anuncios', fonte);
     addFilter(sqlC, sqlP, 'informacoes_da_fonte', informacoes_da_fonte);
 
-    // Perdidos — leads criados no mês com status F
-    const perdC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, `detalhes_de_status = 'F'`, TESTE];
+    const perdC = [`DATE_FORMAT(criado_em, '%Y-%m') = ?`, `detalhes_de_status = 'F'`, TESTE, INBOUND];
     const perdP = [mes];
-    addFilter(perdC, perdP, 'tipo_de_lead', tipo_de_lead);
     addFilter(perdC, perdP, 'canal', canal);
     addFilter(perdC, perdP, 'sistema_de_anuncios', fonte);
 
-    const [mqlRows, sqlRows, perdRows, meetimeRow] = await Promise.all([
+    const salesC = [`${SALES_BR_BASE}`, `stage_group = 'S'`, `DATE_FORMAT(data_de_inicio, '%Y-%m') = ?`];
+    const salesP = [mes];
+
+    const perdSalesC = [`${SALES_BR_BASE}`, `stage_group = 'F'`, `DATE_FORMAT(data_de_termino, '%Y-%m') = ?`];
+    const perdSalesP = [mes];
+
+    const [mqlRows, sqlRows, perdRows, salesRows, perdSalesRows] = await Promise.all([
       brPool.query(`SELECT * FROM view_leadsBrCloude WHERE ${mqlC.join(' AND ')}`, mqlP).then(([r]) => r),
       brPool.query(`SELECT * FROM view_leadsBrCloude WHERE ${sqlC.join(' AND ')}`, sqlP).then(([r]) => r),
       brPool.query(`SELECT * FROM view_leadsBrCloude WHERE ${perdC.join(' AND ')}`, perdP).then(([r]) => r),
-      brPool.query(
-        `SELECT COUNT(id_lead) AS count FROM view_meetimeClaude
-         WHERE ${MEETIME_OWNERS} AND DATE_FORMAT(end_date, '%Y-%m') = ?`,
-        [mes]
-      ).then(([[r]]) => r),
+      brPool.query(`SELECT * FROM sales_br WHERE ${salesC.join(' AND ')}`, salesP).then(([r]) => r),
+      brPool.query(`SELECT * FROM sales_br WHERE ${perdSalesC.join(' AND ')}`, perdSalesP).then(([r]) => r),
     ]);
 
-    const mqls    = mqlRows.length;
-    const sqls    = sqlRows.length;
-    const perdidos = perdRows.length;
-
-    // Breakdown Inbound / Outbound
-    const mqls_inbound  = mqlRows.filter(r => r.tipo_de_lead === 'Inbound').length;
-    const mqls_outbound = Number(meetimeRow.count);
-    const mqls_total    = mqls_inbound + mqls_outbound;
-
-    const sqls_inbound  = sqlRows.filter(r => r.tipo_de_lead === 'Inbound').length;
-    const sqls_outbound = sqlRows.filter(r => r.tipo_de_lead === 'Outbound').length;
-    const sqls_total    = sqls_inbound + sqls_outbound;
-
     res.json({
-      // Totais legados (respeitam filtro tipo_de_lead)
-      mqls,
-      sqls,
-      perdidos,
-      taxa: taxa(sqls, mqls),
+      mqls:    mqlRows.length,
+      sqls:    sqlRows.length,
+      perdidos: perdRows.length,
+      taxa:    taxa(sqlRows.length, mqlRows.length),
 
-      // Breakdown combinado
-      mqls_inbound,
-      mqls_outbound,
-      mqls_total,
-      sqls_inbound,
-      sqls_outbound,
-      sqls_total,
-      taxa_total:    taxa(sqls_total, mqls_total),
-      taxa_inbound:  taxa(sqls_inbound, mqls_inbound),
-      taxa_outbound: taxa(sqls_outbound, mqls_outbound),
+      vendas_mes:   salesRows.length,
+      perdidos_mes: perdSalesRows.length,
+      motivos_perda: groupByWithPct(perdSalesRows, 'fase_do_negocio'),
+      source_vendas: groupBy(salesRows, 'sistemas_de_anuncios'),
+      medium_vendas: groupBy(salesRows, 'campaign_search_term'),
+      camp_vendas:   groupBy(salesRows, 'ad_campaign_utm').slice(0, 5),
 
-      // Gráficos
-      canal_leads:   groupBy(mqlRows, 'canal'),
-      canal_sqls:    groupBy(sqlRows, 'canal'),
-      source_leads:  groupBy(mqlRows, 'sistema_de_anuncios'),
-      source_sqls:   groupBy(sqlRows, 'sistema_de_anuncios'),
-      medium_leads:  groupBy(mqlRows, 'midia'),
-      medium_sqls:   groupBy(sqlRows, 'midia'),
-      status_breakdown:          groupBy(mqlRows, 'status'),
-      tipo_de_lead_leads:        groupBy(mqlRows, 'tipo_de_lead'),
+      canal_leads:              groupBy(mqlRows, 'canal'),
+      canal_sqls:               groupBy(sqlRows, 'canal'),
+      source_leads:             groupBy(mqlRows, 'sistema_de_anuncios'),
+      source_sqls:              groupBy(sqlRows, 'sistema_de_anuncios'),
+      medium_leads:             groupBy(mqlRows, 'midia'),
+      medium_sqls:              groupBy(sqlRows, 'midia'),
+      status_breakdown:         groupBy(mqlRows, 'status'),
       informacoes_da_fonte_leads: groupBy(mqlRows, 'informacoes_da_fonte'),
-      top_campanhas_leads: groupBy(mqlRows, 'utm_da_campanha_publicitaria').slice(0, 10),
-      top_campanhas_sqls:  groupBy(sqlRows,  'utm_da_campanha_publicitaria').slice(0, 10),
+      top_campanhas_leads:      groupBy(mqlRows, 'utm_da_campanha_publicitaria').slice(0, 10),
+      top_campanhas_sqls:       groupBy(sqlRows,  'utm_da_campanha_publicitaria').slice(0, 10),
     });
   } catch (err) {
     console.error('[BR]', err.message);

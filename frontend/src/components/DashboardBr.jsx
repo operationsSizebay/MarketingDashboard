@@ -8,7 +8,7 @@ import LineChart from './LineChart'
 import DoughnutChart from './DoughnutChart'
 import CampaignTable from './CampaignTable'
 
-const EMPTY = { tipo_de_lead: '', canal: '', fonte: '', status: '', informacoes_da_fonte: '' }
+const EMPTY = { canal: '', fonte: '', status: '', informacoes_da_fonte: '' }
 const SUB_TABS = [
   { key: 'visao-geral', label: 'Visão Geral' },
   { key: 'midia-paga',  label: 'Mídia Paga' },
@@ -25,24 +25,43 @@ function calcVar(curr, prev) {
   return ((curr - prev) / prev * 100).toFixed(1)
 }
 
-function InOutCard({ title, mqls, sqls, taxa }) {
+function PerdidosSection({ perdidos_mes, motivos_perda }) {
+  if (perdidos_mes == null) return null
   return (
-    <div className="inout-card">
-      <p className="card-header">{title}</p>
-      <div className="inout-metrics">
+    <div className="perdidos-section">
+      <div className="perdidos-header">
         <div>
-          <div className="inout-value">{(mqls ?? 0).toLocaleString('pt-BR')}</div>
-          <div className="inout-label">MQLs</div>
+          <div className="perdidos-total">{(perdidos_mes ?? 0).toLocaleString('pt-BR')}</div>
+          <div className="perdidos-label">perdidos no mês (sales)</div>
         </div>
-        <div>
-          <div className="inout-value">{(sqls ?? 0).toLocaleString('pt-BR')}</div>
-          <div className="inout-label">SQLs</div>
-        </div>
-        <div>
-          <div className="inout-value accent">{taxa ?? 0}%</div>
-          <div className="inout-label">Taxa</div>
-        </div>
+        <p className="card-header" style={{ marginBottom: 0, marginLeft: 'auto' }}>Motivos de Perda</p>
       </div>
+      {motivos_perda && motivos_perda.length > 0 && (
+        <table className="motivos-table">
+          <thead>
+            <tr>
+              <th>Fase do Negócio</th>
+              <th style={{ textAlign: 'right', width: 60 }}>Qtd</th>
+              <th style={{ textAlign: 'right', width: 60 }}>%</th>
+              <th style={{ width: 140 }}>Barra</th>
+            </tr>
+          </thead>
+          <tbody>
+            {motivos_perda.map((m, i) => (
+              <tr key={m.motivo} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                <td>{m.motivo}</td>
+                <td style={{ textAlign: 'right', fontWeight: 600 }}>{m.count}</td>
+                <td style={{ textAlign: 'right', color: '#888' }}>{m.percentual}%</td>
+                <td>
+                  <div className="motivo-bar">
+                    <div className="motivo-bar-fill" style={{ width: `${m.percentual}%` }} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }
@@ -86,9 +105,6 @@ export default function DashboardBr() {
   const reset = () => setFilters(EMPTY)
   const hasFilters = Object.values(filters).some(Boolean)
 
-  const showInbound  = !filters.tipo_de_lead || filters.tipo_de_lead === 'Inbound'
-  const showOutbound = !filters.tipo_de_lead || filters.tipo_de_lead === 'Outbound'
-
   return (
     <div className="dashboard br-dashboard">
       <div className="controls-row">
@@ -101,11 +117,6 @@ export default function DashboardBr() {
           <select value={filters.fonte} onChange={e => setF('fonte', e.target.value)}>
             <option value="">Fonte</option>
             {(data?.source_leads || []).map(x => <option key={x.name} value={x.name}>{x.name}</option>)}
-          </select>
-          <select value={filters.tipo_de_lead} onChange={e => setF('tipo_de_lead', e.target.value)}>
-            <option value="">Tipo de Lead</option>
-            <option value="Inbound">Inbound</option>
-            <option value="Outbound">Outbound</option>
           </select>
           <select value={filters.status} onChange={e => setF('status', e.target.value)}>
             <option value="">Status</option>
@@ -124,63 +135,43 @@ export default function DashboardBr() {
 
       {data && (
         <>
-          {/* Métricas principais */}
           <div className="metrics-grid">
             <IntMetricCard
-              label="Total MQLs"
-              value={(data.mqls_total ?? data.mqls).toLocaleString('pt-BR')}
-              subtitle="inbound + outbound"
-              variation={calcVar(data.mqls_total, prevData?.mqls_total)}
+              label="MQLs"
+              value={data.mqls.toLocaleString('pt-BR')}
+              subtitle="leads inbound no mês"
+              variation={calcVar(data.mqls, prevData?.mqls)}
             />
             <IntMetricCard
-              label="Total SQLs"
-              value={(data.sqls_total ?? data.sqls).toLocaleString('pt-BR')}
+              label="SQLs"
+              value={data.sqls.toLocaleString('pt-BR')}
               subtitle="convertidos no mês"
-              variation={calcVar(data.sqls_total, prevData?.sqls_total)}
+              variation={calcVar(data.sqls, prevData?.sqls)}
             />
             <IntMetricCard
               label="Taxa MQL→SQL"
-              value={`${data.taxa_total ?? data.taxa}%`}
-              subtitle="conversão total"
-              variation={calcVar(data.taxa_total, prevData?.taxa_total)}
+              value={`${data.taxa}%`}
+              subtitle="conversão de leads"
+              variation={calcVar(data.taxa, prevData?.taxa)}
               accent
             />
             <IntMetricCard
-              label="Perdidos"
-              value={data.perdidos.toLocaleString('pt-BR')}
-              subtitle="oportunidades perdidas"
-              variation={calcVar(data.perdidos, prevData?.perdidos)}
+              label="Vendas"
+              value={(data.vendas_mes ?? 0).toLocaleString('pt-BR')}
+              subtitle="fechamentos no mês"
+              variation={calcVar(data.vendas_mes, prevData?.vendas_mes)}
             />
           </div>
 
-          {/* Cards Inbound / Outbound */}
-          <div className="inout-grid">
-            {showInbound && (
-              <InOutCard
-                title="Inbound"
-                mqls={data.mqls_inbound}
-                sqls={data.sqls_inbound}
-                taxa={data.taxa_inbound}
-              />
-            )}
-            {showOutbound && (
-              <InOutCard
-                title="Outbound"
-                mqls={data.mqls_outbound}
-                sqls={data.sqls_outbound}
-                taxa={data.taxa_outbound}
-              />
-            )}
-          </div>
-
-          {/* Funil + Rosca */}
           <div className="funnel-donut-row">
-            <Funnel mqls={data.mqls_total ?? data.mqls} sqls={data.sqls_total ?? data.sqls} perdidos={data.perdidos} theme="int" />
+            <Funnel mqls={data.mqls} sqls={data.sqls} vendas={data.vendas_mes ?? 0} theme="br" />
             <div className="chart-card donut-card">
-              <p className="card-header">MQLs por Canal</p>
-              <DoughnutChart data={data.canal_leads} />
+              <p className="card-header">MQLs por Fonte</p>
+              <DoughnutChart data={data.source_leads} />
             </div>
           </div>
+
+          <PerdidosSection perdidos_mes={data.perdidos_mes} motivos_perda={data.motivos_perda} />
 
           <div className="sub-tab-bar">
             {SUB_TABS.map(({ key, label }) => (
@@ -213,12 +204,12 @@ export default function DashboardBr() {
                 <HorizontalBar data={data.source_sqls} total={data.sqls} variant="blue-dark" />
               </div>
               <div className="chart-card">
-                <p className="card-header">Tipo de Lead</p>
-                <HorizontalBar data={data.tipo_de_lead_leads} total={data.mqls} variant="blue" />
+                <p className="card-header">Status</p>
+                <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="blue" />
               </div>
               <div className="chart-card">
-                <p className="card-header">Status</p>
-                <HorizontalBar data={data.status_breakdown} total={data.mqls} variant="blue-dark" />
+                <p className="card-header">Informações da Fonte</p>
+                <HorizontalBar data={data.informacoes_da_fonte_leads} total={data.mqls} variant="blue-dark" />
               </div>
             </div>
           )}
@@ -232,6 +223,18 @@ export default function DashboardBr() {
               <div className="chart-card">
                 <p className="card-header">Mídia — SQLs</p>
                 <HorizontalBar data={data.medium_sqls} total={data.sqls} variant="blue-dark" />
+              </div>
+              <div className="chart-card">
+                <p className="card-header">UTM Source — Vendas</p>
+                <HorizontalBar data={data.source_vendas} total={data.vendas_mes ?? 0} variant="blue" />
+              </div>
+              <div className="chart-card">
+                <p className="card-header">UTM Medium — Vendas</p>
+                <HorizontalBar data={data.medium_vendas} total={data.vendas_mes ?? 0} variant="blue-dark" />
+              </div>
+              <div className="chart-card col-span-2">
+                <p className="card-header">Top 5 Campanhas — Vendas</p>
+                <CampaignTable data={data.camp_vendas} total={data.vendas_mes ?? 0} />
               </div>
               <div className="chart-card col-span-2">
                 <p className="card-header">Top Campanhas — MQLs</p>

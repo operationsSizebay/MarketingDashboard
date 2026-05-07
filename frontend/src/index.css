@@ -268,7 +268,7 @@ select:focus { outline: none; border-color: var(--teracota); }
 .hbar-empty { color: #bbb; font-size: 13px; font-style: italic; }
 .hbar-item {
   display: grid;
-  grid-template-columns: 170px 1fr 44px;
+  grid-template-columns: 160px 1fr 100px;
   align-items: center;
   gap: 10px;
 }
@@ -590,12 +590,125 @@ select:focus { outline: none; border-color: var(--teracota); }
 }
 .btn-signout:hover { background: rgba(255,255,255,0.1); color: var(--white); border-color: rgba(255,255,255,0.5); }
 
+/* ── Funnel venda bar ── */
+.funnel-bar.venda     { background: #7b3520; }
+.funnel-bar.venda.int { background: #082f65; }
+
+/* ── Perdidos section ── */
+.perdidos-section {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  border: 1px solid #f0f0f0;
+}
+.perdidos-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.perdidos-total {
+  font-size: 36px;
+  font-weight: 700;
+  color: #9e9e9e;
+  line-height: 1;
+}
+.perdidos-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #bbb;
+  margin-top: 6px;
+}
+
+/* ── Motivos perda table ── */
+.motivos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.motivos-table thead tr { background: #f9f9f9; }
+.motivos-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  border-bottom: 1px solid #eee;
+}
+.motivos-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+.motivo-bar {
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 80px;
+}
+.motivo-bar-fill      { height: 100%; background: #bdbdbd; border-radius: 4px; transition: width 0.4s ease; }
+.motivo-bar-fill.int  { background: var(--int-blue); }
+
+/* ── HorizontalBar percentage ── */
+.hbar-pct { font-size: 11px; color: #bbb; font-weight: 400; }
+.hbar-value { min-width: 90px; }
+
+/* ── País comparison card ── */
+.pais-compare-card { margin-bottom: 20px; }
+.pais-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.pais-legend-item {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pais-legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.blue-dark-dot::before { background: var(--int-blue-dark); }
+.blue-dot::before      { background: #42a5f5; }
+.pais-compare-list { display: flex; flex-direction: column; gap: 10px; }
+.pais-compare-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.pais-name {
+  font-size: 13px;
+  color: var(--soft-gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pais-bars-col { display: flex; flex-direction: column; gap: 3px; }
+.pais-bar-row { display: flex; align-items: center; gap: 8px; }
+.pais-track { flex: 1; height: 14px; }
+.pais-bar-val { font-size: 12px; font-weight: 600; color: var(--soft-gray); white-space: nowrap; min-width: 80px; }
+.pais-bar-val.muted { color: #aaa; font-weight: 400; }
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .charts-grid  { grid-template-columns: 1fr; }
   .chart-card.col-span-2 { grid-column: span 1; }
-  .hbar-item { grid-template-columns: 120px 1fr 40px; }
+  .hbar-item { grid-template-columns: 110px 1fr 80px; }
 }
 @media (max-width: 640px) {
   .dashboard { padding: 16px; }
